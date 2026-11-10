@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アイマス楽曲 所持チェッカー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#f6f5f2;--ink:#1d2540;--sub:#6b7186;--line:#dedbd3;--acc:#d63a7a;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif}
+header{padding:28px 20px 8px;max-width:1100px;margin:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px}
+h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.02em}
+.stat{margin-left:auto;color:var(--sub)}
+.stat b{color:var(--acc);font-size:22px}
+main{max-width:1100px;margin:auto;padding:0 20px 60px}
+.tabs{overflow-y:hidden;display:flex;gap:4px;border-bottom:2px solid var(--line);margin-top:12px;overflow-x:auto}
+.tab{border:0;background:none;padding:10px 16px;font:inherit;font-weight:500;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc);font-weight:700}
+.tab:focus-visible,.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;align-items:center}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:3px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input[type=search]{flex:1;min-width:180px;max-width:340px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--card)}
+.wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{white-space:nowrap;position:sticky;top:0;background:var(--card);text-align:left;font-weight:700;font-size:13px;color:var(--sub);padding:10px 12px;border-bottom:2px solid var(--line)}
+.sort{border:0;background:none;font:inherit;font-weight:700;color:inherit;cursor:pointer;padding:0}
+.sort span{color:var(--acc)}
+th[aria-sort]:not([aria-sort=none]){color:var(--ink)}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.own td{color:var(--sub)}
+td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ty{color:var(--sub);font-size:12px;margin-left:6px}
+.al:empty::before{content:"—";color:var(--line)}
+.sw label{position:relative;display:inline-block;width:40px;height:22px;cursor:pointer}
+.sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.sw i{position:absolute;inset:0;background:#c9c6bd;border-radius:99px;transition:background .15s}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .15s}
+.sw input:checked+i{background:var(--acc)}.sw input:checked+i::after{transform:translateX(18px)}
+.sw input:focus-visible+i{outline:2px solid var(--ink);outline-offset:2px}
+.empty{padding:40px;text-align:center;color:var(--sub)}
+@media(prefers-reduced-motion:reduce){.sw i,.sw i::after{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>アイマス楽曲 所持チェッカー</h1>
+  <div class="stat">所持 <b id="own">0</b> / <span id="all">0</span> 曲</div>
+</header>
+<main>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="bar" id="brands" role="group" aria-label="ブランド"></div>
+  <div class="tools">
+    <input type="search" id="q" placeholder="曲名・歌唱者で絞り込み" aria-label="曲名・歌唱者で絞り込み">
+  </div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>所持</th><th>ブランド</th><th data-s="t" aria-sort="none"><button class="sort">楽曲名<span></span></button></th><th data-s="s" aria-sort="none"><button class="sort">歌唱者<span></span></button></th><th data-s="d" aria-sort="none"><button class="sort">発売年月日<span></span></button></th><th>収録アルバム</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden></div>
+  </div>
+</main>
+<script>
+const TABS=[["original","オリジナル"],["remix","リミックス"],["cover","カバー"],["unowned","未所持のみ"]];
+const TYPE={original:"",remix:"リミックス",cover:"カバー"};
+const KEY="imas-owned-v1";
+let DATA,owned=new Set(),tab="original",brand="",query="",sk="",sd=1;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+try{owned=new Set(JSON.parse(localStorage.getItem(KEY)||"[]"))}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify([...owned]))}catch(e){}};
+
+fetch("songs.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{DATA=d;init()}).catch(()=>{
+  $("empty").hidden=false;
+  $("empty").textContent="songs.json を読み込めませんでした。GitHub Pages上で開くか、ローカルサーバー経由で開いてください。";
+});
+
+function init(){
+  $("tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join("");
+  $("brands").innerHTML=["",...DATA.brands].map(b=>`<button class="chip" data-b="${esc(b)}" aria-pressed="${b===brand}">${b||"全曲"}</button>`).join("");
+  $("tabs").onclick=e=>{const t=e.target.closest(".tab");if(!t)return;tab=t.dataset.t;
+    document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));render()};
+  $("brands").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;brand=c.dataset.b;
+    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===c));render()};
+  $("q").oninput=e=>{query=e.target.value.trim().toLowerCase();render()};
+  $("rows").onchange=e=>{const id=e.target.dataset.id;if(!id)return;
+    e.target.checked?owned.add(id):owned.delete(id);save();
+    if(tab==="unowned")render();else{e.target.closest("tr").classList.toggle("own",e.target.checked);count()}};
+  document.querySelector("thead").onclick=e=>{const th=e.target.closest("th[data-s]");if(!th)return;
+    const k=th.dataset.s;if(sk!==k){sk=k;sd=1}else if(sd===1)sd=-1;else{sk="";sd=1}render()};
+  $("all").textContent=DATA.songs.length;
+  render();
+}
+
+function count(){$("own").textContent=DATA.songs.filter(s=>owned.has(s.id)).length}
+
+function render(){
+  const list=DATA.songs.filter(s=>
+    (tab==="unowned"?!owned.has(s.id):s.k===tab)&&(!brand||s.b===brand)&&
+    (!query||(s.t+" "+s.s).toLowerCase().includes(query)));
+  if(sk){const empty=v=>sk==="d"?v==="不明":!v;
+    list.sort((a,b)=>{const x=a[sk],y=b[sk],ex=empty(x),ey=empty(y);if(ex||ey)return ex-ey;
+      return(sk==="d"?(x<y?-1:x>y?1:0):x.localeCompare(y,"ja"))*sd})}
+  document.querySelectorAll("th[data-s]").forEach(th=>{const on=th.dataset.s===sk;
+    th.setAttribute("aria-sort",on?(sd>0?"ascending":"descending"):"none");th.querySelector("span").textContent=on?(sd>0?" ▲":" ▼"):""});
+  $("rows").innerHTML=list.map(s=>`<tr class="${owned.has(s.id)?"own":""}">
+    <td class="sw"><label><input type="checkbox" role="switch" data-id="${s.id}" aria-label="${esc(s.t)}を所持"${owned.has(s.id)?" checked":""}><i></i></label></td>
+    <td>${esc(s.b)}</td>
+    <td>${esc(s.t)}${tab==="unowned"&&TYPE[s.k]?`<span class="ty">${TYPE[s.k]}</span>`:""}</td>
+    <td>${esc(s.s)}</td><td class="dt">${esc(s.d)}</td><td class="al">${esc(s.a)}</td></tr>`).join("");
+  $("empty").hidden=list.length>0;
+  if(!list.length)$("empty").textContent=tab==="unowned"?"該当する未所持曲はありません。":"該当する曲がありません。";
+  count();
+}
+</script>
+</body>
+</html>
