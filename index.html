@@ -6,7 +6,7 @@
 <title>アイマス楽曲 所持チェッカー</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-:root{--bg:#f6f5f2;--ink:#1d2540;--sub:#6b7186;--line:#dedbd3;--acc:#d63a7a;--card:#fff}
+:root{--bg:#f6f5f2;--ink:#111111;--sub:#6b7186;--line:#dedbd3;--acc:#111111;--card:#fff}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif}
 header{padding:28px 20px 8px;max-width:1100px;margin:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px}
@@ -19,8 +19,8 @@ main{max-width:1100px;margin:auto;padding:0 20px 60px}
 .tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc);font-weight:700}
 .tab:focus-visible,.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;align-items:center}
-.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:3px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
-.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip{border:2px solid var(--c);background:var(--card);border-radius:99px;padding:2px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--c);color:var(--t);font-weight:700}
 .tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 input[type=search]{flex:1;min-width:180px;max-width:340px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--card)}
 .wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
@@ -67,6 +67,8 @@ td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 const TABS=[["original","オリジナル"],["remix","リミックス"],["cover","カバー"],["unowned","未所持のみ"]];
 const TYPE={original:"",remix:"リミックス",cover:"カバー"};
 const KEY="imas-owned-v1";
+const COL={"":"#ff74b8","765AS":"#f34f6d","876プロ":"#e91e63","961プロ":"#000001","シンデレラガールズ":"#2681c8","ミリオンライブ":"#ffc30b","SideM":"#0fbe94","シャイニーカラーズ":"#8dbbff","学園アイドルマスター":"#f39800","ヴイアライヴ":"#656a75"};
+const textOn=c=>{const n=parseInt(c.slice(1),16),l=.299*(n>>16)+.587*(n>>8&255)+.114*(n&255);return l>150?"#111":"#fff"};
 let DATA,owned=new Set(),tab="original",brand="",query="",sk="",sd=1;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -81,7 +83,7 @@ fetch("songs.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{DATA=d;init()}
 
 function init(){
   $("tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" data-t="${k}" aria-selected="${k===tab}">${l}</button>`).join("");
-  $("brands").innerHTML=["",...DATA.brands].map(b=>`<button class="chip" data-b="${esc(b)}" aria-pressed="${b===brand}">${b||"全曲"}</button>`).join("");
+  $("brands").innerHTML=["",...DATA.brands].map(b=>`<button class="chip" style="--c:${COL[b]||"#111111"};--t:${textOn(COL[b]||"#111111")}" data-b="${esc(b)}" aria-pressed="${b===brand}">${b||"全曲"}</button>`).join("");
   $("tabs").onclick=e=>{const t=e.target.closest(".tab");if(!t)return;tab=t.dataset.t;
     document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));render()};
   $("brands").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;brand=c.dataset.b;
