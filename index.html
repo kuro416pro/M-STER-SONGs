@@ -10,14 +10,14 @@
 .chip{box-shadow:0 0 0 1px #555}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif}
-header{padding:28px 20px 8px;max-width:1100px;margin:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px}
+header{padding:28px 20px 8px;max-width:1500px;margin:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px}
 h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.02em}
 .stat{margin-left:auto;margin-right:4px;color:var(--sub)}
 .stat b{color:var(--acc);font-size:22px}
 header .acct{flex-basis:100%;display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:var(--sub);font-size:13px}
 .btn{border:1px solid var(--ink);background:var(--card);border-radius:8px;padding:4px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
-main{max-width:1100px;margin:auto;padding:0 20px 60px}
-.tabs{overflow-y:hidden;display:flex;gap:4px;border-bottom:2px solid var(--line);margin-top:12px;overflow-x:auto}
+main{max-width:1500px;margin:auto;padding:0 20px 60px}
+.tabs{position:sticky;top:0;z-index:5;background:var(--bg);overflow-y:hidden;display:flex;gap:4px;border-bottom:2px solid var(--line);margin-top:12px;overflow-x:auto}
 .tab{border:0;background:none;padding:10px 16px;font:inherit;font-weight:500;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
 .tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc);font-weight:700}
 .tab:focus-visible,.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -35,6 +35,7 @@ th[aria-sort]:not([aria-sort=none]){color:var(--ink)}
 td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr.own{background:var(--ownbg)}
 tr.own td:not(.sw){color:var(--sub);opacity:.45}
+td:nth-child(2){white-space:nowrap}
 td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 .ty{color:var(--sub);font-size:12px;margin-left:6px}
 .al:empty::before{content:"—";color:var(--line)}
