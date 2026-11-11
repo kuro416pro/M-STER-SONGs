@@ -21,6 +21,9 @@ main{max-width:1500px;margin:auto;padding:0 20px 60px}
 .tab{border:0;background:none;padding:10px 16px;font:inherit;font-weight:500;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
 .tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc);font-weight:700}
 .tab:focus-visible,.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.sub{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.sub button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:2px 12px;font:inherit;font-size:13px;cursor:pointer}
+.sub button[aria-pressed=true]{background:var(--ink);color:#000001;border-color:var(--ink);font-weight:700}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;align-items:center}
 .chip{border:2px solid var(--c);background:var(--card);border-radius:99px;padding:2px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
 .chip[aria-pressed=true]{background:var(--c);color:var(--t);font-weight:700}
@@ -58,6 +61,7 @@ td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 </header>
 <main>
   <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="sub" id="sub" hidden></div>
   <div class="bar" id="brands" role="group" aria-label="ブランド"></div>
   <div class="tools">
     <input type="search" id="q" placeholder="曲名・歌唱者で絞り込み" aria-label="曲名・歌唱者で絞り込み">
@@ -79,7 +83,7 @@ const TYPE={original:"",remix:"リミックス",cover:"カバー"};
 const KEY="imas-owned-v1";
 const COL={"":"#ff74b8","765AS":"#f34f6d","876プロ":"#e91e63","961プロ":"#000001","シンデレラガールズ":"#2681c8","ミリオンライブ":"#ffc30b","SideM":"#0fbe94","シャイニーカラーズ":"#8dbbff","学園アイドルマスター":"#f39800","ヴイアライヴ":"#656a75"};
 const textOn=c=>{const n=parseInt(c.slice(1),16),l=.299*(n>>16)+.587*(n>>8&255)+.114*(n&255);return l>150?"#111":"#fff"};
-let DATA,owned=new Set(),tab="original",brand="",query="",sk="",sd=1;
+let DATA,owned=new Set(),tab="original",brand="",query="",sk="",sd=1,sub="";
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -140,6 +144,7 @@ function init(){
     document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));render()};
   $("brands").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;brand=c.dataset.b;
     document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===c));render()};
+  $("sub").onclick=e=>{const b=e.target.closest("button");if(!b)return;sub=b.dataset.k;render()};
   $("q").oninput=e=>{query=e.target.value.trim().toLowerCase();render()};
   $("rows").onchange=e=>{const id=e.target.dataset.id;if(!id)return;
     e.target.checked?owned.add(id):owned.delete(id);save();sync(id,e.target.checked);
@@ -155,9 +160,14 @@ function init(){
 function count(){$("own").textContent=DATA.songs.filter(s=>owned.has(s.id)).length}
 
 function render(){
-  const list=DATA.songs.filter(s=>
-    (tab==="unowned"?!owned.has(s.id):s.k===tab)&&(!brand||s.b===brand)&&
-    (!query||(s.t+" "+s.s).toLowerCase().includes(query)));
+  const ok=s=>(!brand||s.b===brand)&&(!query||(s.t+" "+s.s).toLowerCase().includes(query));
+  if(tab==="unowned"){const c={original:0,remix:0,cover:0};
+    DATA.songs.forEach(s=>{if(!owned.has(s.id)&&ok(s))c[s.k]++});
+    $("sub").innerHTML=[["","すべて",c.original+c.remix+c.cover],["original","オリジナル",c.original],["remix","リミックス",c.remix],["cover","カバー",c.cover]]
+      .map(([k,l,n])=>`<button data-k="${k}" aria-pressed="${k===sub}">${l} ${n}</button>`).join("");
+  }
+  $("sub").hidden=tab!=="unowned";
+  const list=DATA.songs.filter(s=>(tab==="unowned"?!owned.has(s.id)&&(!sub||s.k===sub):s.k===tab)&&ok(s));
   if(sk){const empty=v=>sk==="d"?v==="不明":!v;
     list.sort((a,b)=>{const x=a[sk],y=b[sk],ex=empty(x),ey=empty(y);if(ex||ey)return ex-ey;
       return(sk==="d"?(x<y?-1:x>y?1:0):x.localeCompare(y,"ja"))*sd})}
@@ -166,7 +176,7 @@ function render(){
   $("rows").innerHTML=list.map(s=>`<tr class="${owned.has(s.id)?"own":""}">
     <td class="sw"><label><input type="checkbox" role="switch" data-id="${s.id}" aria-label="${esc(s.t)}を所持"${owned.has(s.id)?" checked":""}><i></i></label></td>
     <td>${esc(s.b)}</td>
-    <td>${esc(s.t)}${tab==="unowned"&&TYPE[s.k]?`<span class="ty">${TYPE[s.k]}</span>`:""}</td>
+    <td>${esc(s.t)}${tab==="unowned"&&!sub&&TYPE[s.k]?`<span class="ty">${TYPE[s.k]}</span>`:""}</td>
     <td>${esc(s.s)}</td><td class="dt">${esc(s.d)}</td><td class="al">${esc(s.a)}</td></tr>`).join("");
   $("empty").hidden=list.length>0;
   if(!list.length)$("empty").textContent=tab==="unowned"?"該当する未所持曲はありません。":"該当する曲がありません。";
