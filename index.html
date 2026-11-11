@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>M@STER SONGs</title>
+<title>アイマス楽曲 所持チェッカー</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
 :root{--bg:#f6f5f2;--ink:#111111;--sub:#6b7186;--line:#dedbd3;--acc:#111111;--card:#fff}
@@ -13,6 +13,8 @@ header{padding:28px 20px 8px;max-width:1100px;margin:auto;display:flex;flex-wrap
 h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.02em}
 .stat{margin-left:auto;color:var(--sub)}
 .stat b{color:var(--acc);font-size:22px}
+header .acct{flex-basis:100%;display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:var(--sub);font-size:13px}
+.btn{border:1px solid var(--ink);background:var(--card);border-radius:8px;padding:4px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
 main{max-width:1100px;margin:auto;padding:0 20px 60px}
 .tabs{overflow-y:hidden;display:flex;gap:4px;border-bottom:2px solid var(--line);margin-top:12px;overflow-x:auto}
 .tab{border:0;background:none;padding:10px 16px;font:inherit;font-weight:500;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
@@ -46,8 +48,9 @@ td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 </head>
 <body>
 <header>
-  <h1>M@STER SONGs</h1>
+  <h1>アイマス楽曲 所持チェッカー</h1>
   <div class="stat">所持 <b id="own">0</b> / <span id="all">0</span> 曲</div>
+  <div class="acct" id="acct"></div>
 </header>
 <main>
   <div class="tabs" role="tablist" id="tabs"></div>
@@ -63,7 +66,10 @@ td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
     <div class="empty" id="empty" hidden></div>
   </div>
 </main>
-<script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc,onSnapshot,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 const TABS=[["original","オリジナル"],["remix","リミックス"],["cover","カバー"],["unowned","未所持のみ"]];
 const TYPE={original:"",remix:"リミックス",cover:"カバー"};
 const KEY="imas-owned-v1";
@@ -75,6 +81,48 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 
 try{owned=new Set(JSON.parse(localStorage.getItem(KEY)||"[]"))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify([...owned]))}catch(e){}};
+
+// ---- ログイン・同期(Firebase) ----
+const app=initializeApp({apiKey:"AIzaSyDg2KVX7vnik_QQu1mnWAdIr0n3yqyaKew",authDomain:"master-songs.firebaseapp.com",projectId:"master-songs",storageBucket:"master-songs.firebasestorage.app",messagingSenderId:"644792524384",appId:"1:644792524384:web:67576a0f990366fd722d05"});
+const auth=getAuth(app),db=getFirestore(app);
+let user=null,unsub=null;
+const ref=()=>doc(db,"users",user.uid);
+function ui(msg){
+  $("acct").innerHTML=user
+    ?`<span>${esc(user.displayName||user.email||"ログイン中")}でログイン中<span class="ty">${msg||""}</span></span><button class="btn" id="out">ログアウト</button>`
+    :`<span>ログインすると、端末間で所持状態を同期できます</span><button class="btn" id="in">Googleでログイン</button>`;
+  if(user)$("out").onclick=()=>signOut(auth);
+  else $("in").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>{if(e.code!=="auth/popup-closed-by-user"&&e.code!=="auth/cancelled-popup-request")alert("ログインできませんでした。ポップアップがブロックされていないか確認してください。")});
+}
+function sync(id,on){
+  if(!user)return;
+  setDoc(ref(),{owned:on?arrayUnion(id):arrayRemove(id)},{merge:true}).then(()=>ui("同期済み")).catch(()=>ui("同期できませんでした"));
+}
+onAuthStateChanged(auth,async u=>{
+  user=u;if(unsub){unsub();unsub=null}
+  ui(u?"同期中…":"");
+  if(!u)return;
+  try{
+    const flag="imas-merged-"+u.uid;let merged=false;
+    try{merged=localStorage.getItem(flag)==="1"}catch(e){}
+    const snap=await getDoc(ref());
+    const cloud=new Set(snap.exists()?(snap.data().owned||[]):[]);
+    if(merged)owned=cloud;
+    else{ // この端末で初めてログインしたとき: 端末内のデータとクラウドのデータを合体
+      const all=new Set([...cloud,...owned]);
+      if(!snap.exists()||all.size!==cloud.size)await setDoc(ref(),{owned:[...all]},{merge:true});
+      owned=all;try{localStorage.setItem(flag,"1")}catch(e){}
+    }
+    save();if(DATA)render();
+    unsub=onSnapshot(ref(),s=>{
+      if(s.metadata.hasPendingWrites)return;
+      const n=new Set((s.data()||{}).owned||[]);
+      if(n.size===owned.size&&[...n].every(x=>owned.has(x)))return;
+      owned=n;save();if(DATA)render();
+    });
+    ui("同期済み");
+  }catch(e){ui("同期できませんでした")}
+});
 
 fetch("songs.json",{cache:"no-cache"}).then(r=>r.json()).then(d=>{DATA=d;init()}).catch(()=>{
   $("empty").hidden=false;
@@ -90,7 +138,7 @@ function init(){
     document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===c));render()};
   $("q").oninput=e=>{query=e.target.value.trim().toLowerCase();render()};
   $("rows").onchange=e=>{const id=e.target.dataset.id;if(!id)return;
-    e.target.checked?owned.add(id):owned.delete(id);save();
+    e.target.checked?owned.add(id):owned.delete(id);save();sync(id,e.target.checked);
     if(tab==="unowned")render();else{e.target.closest("tr").classList.toggle("own",e.target.checked);count()}};
   document.querySelector("thead").onclick=e=>{const th=e.target.closest("th[data-s]");if(!th)return;
     const k=th.dataset.s;if(sk!==k){sk=k;sd=1}else if(sd===1)sd=-1;else{sk="";sd=1}render()};
