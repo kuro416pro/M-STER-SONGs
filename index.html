@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>M@STER SONGs</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000001">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
 :root{--bg:#000001;--ink:#ececee;--sub:#9a9aa4;--line:#2e2e35;--acc:#ececee;--card:#1a1a1f;--off:#3a3a42;--on:#35504a;--knoboff:#fff;--knobon:#86a39b;--ownbg:#111114;color-scheme:dark}
@@ -81,7 +84,7 @@ import {getFirestore,doc,getDoc,setDoc,onSnapshot,arrayUnion,arrayRemove} from "
 const TABS=[["original","オリジナル"],["remix","リミックス"],["cover","カバー"],["unowned","未所持のみ"]];
 const TYPE={original:"",remix:"リミックス",cover:"カバー"};
 const KEY="imas-owned-v1";
-const COL={"":"#ff74b8","765AS":"#f34f6d","876プロ":"#e91e63","961プロ":"#000001","シンデレラガールズ":"#2681c8","ミリオンライブ":"#ffc30b","SideM":"#0fbe94","シャイニーカラーズ":"#8dbbff","学園アイドルマスター":"#f39800","ヴイアライヴ":"#656a75"};
+const COL={"":"#ff74b8","765AS":"#f34f6d","876プロ":"#e91e63","961&0936":"#000001","シンデレラガールズ":"#2681c8","ミリオンライブ":"#ffc30b","SideM":"#0fbe94","シャイニーカラーズ":"#8dbbff","学園アイドルマスター":"#f39800","ヴイアライヴ":"#656a75"};
 const textOn=c=>{const n=parseInt(c.slice(1),16),l=.299*(n>>16)+.587*(n>>8&255)+.114*(n&255);return l>150?"#111":"#fff"};
 let DATA,owned=new Set(),tab="original",brand="",query="",sk="",sd=1,sub="";
 const $=id=>document.getElementById(id);
