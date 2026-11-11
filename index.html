@@ -5,11 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>M@STER SONGs</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<script>try{var t=localStorage.getItem("imas-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>
-:root{--bg:#f6f5f2;--ink:#111111;--sub:#6b7186;--line:#dedbd3;--acc:#111111;--card:#fff;--off:#c9c6bd;--knobon:#fff;--ownbg:#ecebe7}
-html[data-theme=dark]{--bg:#000001;--ink:#ececee;--sub:#9a9aa4;--line:#2a2a30;--acc:#ececee;--card:#0e0e11;--off:#3a3a42;--knobon:#000001;--ownbg:#08080a;color-scheme:dark}
-html[data-theme=dark] .chip{box-shadow:0 0 0 1px #555}
+:root{--bg:#000001;--ink:#ececee;--sub:#9a9aa4;--line:#2e2e35;--acc:#ececee;--card:#1a1a1f;--off:#3a3a42;--on:#35504a;--knoboff:#fff;--knobon:#86a39b;--ownbg:#111114;color-scheme:dark}
+.chip{box-shadow:0 0 0 1px #555}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif}
 header{padding:28px 20px 8px;max-width:1100px;margin:auto;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px}
@@ -43,8 +41,8 @@ td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 .sw label{position:relative;display:inline-block;width:40px;height:22px;cursor:pointer}
 .sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
 .sw i{position:absolute;inset:0;background:var(--off);border-radius:99px;transition:background .15s}
-.sw i::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .15s}
-.sw input:checked+i{background:var(--acc)}.sw input:checked+i::after{transform:translateX(18px);background:var(--knobon)}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;background:var(--knoboff);border-radius:50%;transition:transform .15s}
+.sw input:checked+i{background:var(--on)}.sw input:checked+i::after{transform:translateX(18px);background:var(--knobon)}
 .sw input:focus-visible+i{outline:2px solid var(--ink);outline-offset:2px}
 .empty{padding:40px;text-align:center;color:var(--sub)}
 @media(prefers-reduced-motion:reduce){.sw i,.sw i::after{transition:none}}
@@ -54,7 +52,6 @@ td.sw{width:64px}.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 <header>
   <h1>M@STER SONGs</h1>
   <div class="stat">所持 <b id="own">0</b> / <span id="all">0</span> 曲</div>
-  <button class="btn" id="theme"></button>
   <div class="acct" id="acct"></div>
 </header>
 <main>
@@ -86,12 +83,6 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 
 try{owned=new Set(JSON.parse(localStorage.getItem(KEY)||"[]"))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify([...owned]))}catch(e){}};
-
-// ---- ダークモード ----
-const themeBtn=document.getElementById("theme");
-const setTheme=(t,keep)=>{document.documentElement.dataset.theme=t;if(keep)try{localStorage.setItem("imas-theme",t)}catch(e){};themeBtn.textContent=t==="dark"?"ライトモードにする":"ダークモードにする"};
-themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark",true);
-setTheme(document.documentElement.dataset.theme||"light",false);
 
 // ---- ログイン・同期(Firebase) ----
 const app=initializeApp({apiKey:"AIzaSyDg2KVX7vnik_QQu1mnWAdIr0n3yqyaKew",authDomain:"master-songs.firebaseapp.com",projectId:"master-songs",storageBucket:"master-songs.firebasestorage.app",messagingSenderId:"644792524384",appId:"1:644792524384:web:67576a0f990366fd722d05"});
